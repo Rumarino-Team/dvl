@@ -1,0 +1,6 @@
+[submodule "Wayfinder"]
+	path = Wayfinder
+	url = https://github.com/Teledyne-Marine/Wayfinder
+[submodule "src/lib/Wayfinder"]
+	path = src/lib/Wayfinder
+	url = https://github.com/Teledyne-Marine/Wayfinder
