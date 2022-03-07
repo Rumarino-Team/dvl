@@ -91,8 +91,8 @@ touch README.md # Creates readme.md for server directory
 cd .. # change back
 
 ### Setup of Directory for the DVL Programming Library:
-
-git clone https://github.com/Teledyne-Marine/Wayfinder
+git submodule add https://github.com/Teledyne-Marine/Wayfinder
+#git clone https://github.com/Teledyne-Marine/Wayfinder
 cd Wayfinder 
 pip3 install . # locally install python package
 
