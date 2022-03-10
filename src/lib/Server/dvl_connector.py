@@ -3,8 +3,6 @@ from dvl_data import DVL_DATA
 from datetime import datetime
 from math import nan, isnan
 
-
-
 DEFAULT_LINUX_SERIAL_PORT = '/dev/tty'
 DEFAULT_DVL_PORT = 115200
 

@@ -1,2 +1,8 @@
-export FLASK_APP=server.py
+if the server is being ran from the same directory as the server.py
+    export FLASK_APP=server.py
+
+if the server is being ran from the root of the git dvl repo
+    export FLASK_APP=src/lib/Server/server.py
+
+To start server
 flask run
