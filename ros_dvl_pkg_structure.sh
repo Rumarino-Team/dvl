@@ -49,7 +49,7 @@ cd .. #change back
 ## Setup of launch Directory: 
 
 cd launch 
-touch hydrus_dvl.lauch& # Creates .launch file for DVL component
+touch hydrus_dvl.launch& # Creates .launch file for DVL component
 touch README.md # Creates readme.md for launch directory
 
 cd .. # change back
