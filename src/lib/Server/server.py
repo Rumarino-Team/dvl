@@ -1,5 +1,5 @@
 
-from crypt import methods
+# from crypt import methods
 from flask import Flask, request
 from flask import jsonify
 
@@ -15,8 +15,12 @@ OK = 200
 FORBIDDEN = 403
 
 DUMMY_DVL_DATA = DVL_DATA()
+
 DUMMY_DVL_DEVICE = DVLDummyDevice()
+
+
 DVL_DEVICE = DUMMY_DVL_DEVICE
+DVL_DEVICE.connect()
 
 app = Flask(__name__)
 

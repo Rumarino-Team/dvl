@@ -1,6 +1,6 @@
 class DVL_DATA:
 
-    def __init__(self, coordinates=None, is_valid=None, count=None, struct_id=None,
+    def __init__(self, is_valid=None, count=None, struct_id=None,
                 version=None, system_type=None, system_subtype=None, fw_major_version=None,
                 fw_minor_version=None, fw_patch_version=None, fw_build_version=None,
                 year=None, month=None, day=None, hour=None, minute=None, second=None,
@@ -8,8 +8,8 @@ class DVL_DATA:
                 range_beam1=None, range_beam2=None, range_beam3=None, range_beam4=None,
                 mean_range=None, speed_of_sound=None, status=None, bit_count=None,
                 bit_code=None, voltage=None, transmit_voltage=None, current=None,
-                serial_number=None) -> None:
-        self.coordinates: list = coordinates
+                serial_number=None, dvl_dict_data=None) -> None:
+        
         self.is_valid: bool = is_valid
         self.count: int = count # Count of data packets
         self.struct_id: int = struct_id # Structure id number
@@ -44,8 +44,26 @@ class DVL_DATA:
         self.transmit_voltage: float = transmit_voltage
         self.current: float = current
         self.serial_number: str = serial_number
+        if dvl_dict_data:
+            self.prepare_data(dvl_dict_data)
+    
+    def prepare_data(self, dvl_dict: dict):
+        for key in vars(self).keys():
+            if key in dvl_dict:
+                setattr(self, key, dvl_dict[key])
+
+
+    def clear_data(self):
+        for key in vars(self).keys():
+            setattr(self, key, None)
+    
+    @staticmethod
+    def get_all_var_names_ls():
+        return list(vars(DVL_DATA()).keys())
+
 
 if __name__=='__main__':    
-    pass
+    print('DVL_DATA Test Variable Names:')
+    print(DVL_DATA.get_all_var_names_ls())
     
 

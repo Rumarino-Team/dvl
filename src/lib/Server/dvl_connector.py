@@ -2,7 +2,11 @@ from random import Random
 from dvl_data import DVL_DATA
 from datetime import datetime
 from math import nan, isnan
+from dvl.system import OutputData
+from dvl.dvl import Dvl
 
+
+DEFAULT_MAX_SERIAL_PORTS = 10
 DEFAULT_LINUX_SERIAL_PORT = '/dev/tty'
 DEFAULT_DVL_PORT = 115200
 
@@ -28,30 +32,72 @@ class DVLDevice:
 
 class WayfinderDVL(DVLDevice):
     
-    def __init__(self):
+    def __init__(self, serial_port_path: str = DEFAULT_LINUX_SERIAL_PORT):
         # Find a way to tell the dvl to stop/start and exit/close/release resources
-        pass
+        self.dvl: Dvl = Dvl()
+        self.dvl_data = DVL_DATA()
+        self.current_port = serial_port_path
+        self._register_callback_function()
+        
 
     def connect(self):
-        pass
+        for port_num in range(DEFAULT_MAX_SERIAL_PORTS):
+            if self.dvl.connect(self.current_port + str(port_num)):
+                self.current_port += str(port_num)
+                print(f'Connected to port: {self.current_port}')
+                if not self.dvl.get_setup():
+                    print('Failed to get system setup.\nSystem will disconnect.')
+                    self.disconnect()
+                else:
+                    # Print system setup
+                    print(self.dvl.system_setup)
+                    # Modify system setup structure to set structure trigger
+                    dvl_setup = self.dvl.system_setup
+                    dvl_setup.software_trigger = 1
+                    if not self.dvl.set_setup(dvl_setup):
+                        print('Failed to set system setup.')
+                        self.disconnect()
+                    # Exit command mode, to start pinging
+                    if not self.dvl.exit_command_mode():
+                        print('Failed to exit command mode.')
+                        self.disconnect()
+                    else:
+                        print('Dvl device fully connected.')
+                break
+
+        if not self.dvl.is_connected():
+            print(f'Tried to connect with {DEFAULT_MAX_SERIAL_PORTS} ports and failed.')
+
+
+    def disconnect(self):
+        self.dvl.disconnect()
+        if self.dvl.is_connected:
+            print('Dvl device could not disconnect.')
 
     def start_logging(self):
         # Collect data - make sure working folder exists
         # print("Data logged to {0}".format(DVL.get_log_file_name()))
         # print("Failed to open {0} - make sure it is not used by any other program".format(PORT))
-        pass
+        raise NotImplementedError
 
     def _register_callback_function(self):
-        pass
+        self.dvl.register_ondata_callback(self._update_dvl_data)
 
-    def _unregister_callback_function(self):
-        pass
+    def _unregister_callback_functions(self):
+        self.dvl.unregister_all_callbacks()
 
-    def exit_command_mode(self):
-        pass
+    def _update_dvl_data(self, output_data: OutputData):
+        if output_data is not None:
+            self.dvl_data.clear_data()
+            self.dvl_data.prepare_data(vars(output_data))
+        else:
+            print('Received no data.')
 
-    def set_software_trigger(self):
-        pass
+    def get_data(self):
+        if not self.dvl.send_software_trigger():
+            print('Failed to send data request to Dvl.')            
+        return self.dvl_data
+
 
 
 
