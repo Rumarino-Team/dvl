@@ -7,7 +7,8 @@ from dvl.dvl import Dvl
 
 
 DEFAULT_MAX_SERIAL_PORTS = 10
-DEFAULT_LINUX_SERIAL_PORT = '/dev/tty'
+DEFAULT_LINUX_SERIAL_PORT = '/dev/ttyUSB' # Default port for jetson, usually USB0
+# DEFAULT_LINUX_SERIAL_PORT = '/dev/tty' # Default port usually in linux computer
 DEFAULT_DVL_PORT = 115200
 
 def _check_for_nan(data: DVL_DATA):
@@ -86,7 +87,8 @@ class WayfinderDVL(DVLDevice):
     def _unregister_callback_functions(self):
         self.dvl.unregister_all_callbacks()
 
-    def _update_dvl_data(self, output_data: OutputData):
+    def _update_dvl_data(self, output_data: OutputData, obj):
+        del obj # Used in examples of code provided, no idea why
         if output_data is not None:
             self.dvl_data.clear_data()
             self.dvl_data.prepare_data(vars(output_data))
@@ -95,8 +97,8 @@ class WayfinderDVL(DVLDevice):
 
     def get_data(self):
         if not self.dvl.send_software_trigger():
-            print('Failed to send data request to Dvl.')            
-        return self.dvl_data
+            print('Failed to send data request to Dvl.')                    
+        return { 'DVL_Data' : vars(self.dvl_data) }
 
 
 
