@@ -64,10 +64,13 @@ class WayfinderDVL(DVLDevice):
                         self.disconnect()
                     else:
                         print('Dvl device fully connected.')
+                        return True
                 break
 
         if not self.dvl.is_connected():
             print(f'Tried to connect with {DEFAULT_MAX_SERIAL_PORTS} ports and failed.')
+
+        return False
 
 
     def disconnect(self):
@@ -99,9 +102,6 @@ class WayfinderDVL(DVLDevice):
         if not self.dvl.send_software_trigger():
             print('Failed to send data request to Dvl.')                    
         return { 'DVL_Data' : vars(self.dvl_data) }
-
-
-
 
 
 class DVLDummyDevice(DVLDevice):
