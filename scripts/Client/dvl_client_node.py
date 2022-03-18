@@ -41,6 +41,12 @@ class DVLNodePublisher:
         self.rate.sleep()
 
     def _request_dvl_data(self):
+        """
+        Request data from http server and pass the json data from the request to populate the message instance.
+
+        Raises:
+            ConnectionError -- Can raise exceptions after request limit is reached when server is not turned on or not answering.
+        """
         server_response = get(DVLNodePublisher.URL_ROUTE)
         if server_response.ok:
             self._populate_dvl_msg_data(server_response.json()['DVL_Data'])
@@ -48,13 +54,13 @@ class DVLNodePublisher:
         else:
             print 'Could not retrieve data from DVL server.'
             return False
-            
-    
-    def _populate_dvl_msg_data(self, data_from_request):        
-        for key, val in data_from_request.items(): 
-            if key in dir(self.dvl_msg_data):                            
-                if isinstance(val, unicode):
-                    msg_attr = getattr(self.dvl_msg_data, key)
+        
+    def _populate_dvl_msg_data(self, data_from_request):
+        """Takes the json data dictionary and parses the information and fills the ros message instance."""
+        for key, val in data_from_request.items(): # Iterate over the items of the dictionary (key, val)
+            if key in dir(self.dvl_msg_data): # Checks if the key from the data dictionary is in the DVL_Raw message
+                if isinstance(val, unicode): # Dirty workaround to set string variable from data dictionary
+                    msg_attr = getattr(self.dvl_msg_data, key) # Gets String message instance from Raw_DVL messag instance and set its data value
                     msg_attr.data = val.encode('utf-8')                        
                 else:          
                     setattr(self.dvl_msg_data, key, val)
@@ -67,7 +73,7 @@ class DVLNodePublisher:
             msg_header -- ros Header message instance
 
         Raises:
-            ROSException: ros must be initialized first, usually with init method from rospy
+            ROSException -- ros must be initialized first, usually with init method from rospy
         """
         msg_header = Header()
         msg_header.stamp = Time.now()

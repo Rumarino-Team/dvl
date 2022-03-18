@@ -9,7 +9,7 @@ from dvl.dvl import Dvl
 DEFAULT_MAX_SERIAL_PORTS = 10
 DEFAULT_LINUX_SERIAL_PORT = '/dev/ttyUSB' # Default port for jetson, usually USB0
 # DEFAULT_LINUX_SERIAL_PORT = '/dev/tty' # Default port usually in linux computer
-DEFAULT_DVL_PORT = 115200
+DEFAULT_DVL_PORT = 115200 # Currently not being used
 
 def _check_for_nan(data: DVL_DATA):
     '''NaN values give errors in json format, therefore are converted to -1.0'''

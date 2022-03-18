@@ -1,4 +1,62 @@
 class DVL_DATA:
+    """
+    Data class that will contain the information from the DVL device and then be used to be sent via HTTP get request.
+    !Important! The argument dvl_data_dict can be used to supply a dictionary with all the data (key, val) for the data class and
+    it will be assigned automatically withouth having to assign every attribute one by one in the constructor. !See Usage!
+    More information about dvl driver: https://teledynerdi.myshopify.com/pages/wayfinder-driver-index
+
+    Args: 
+        is_valid: bool
+        count: int
+        struct_id: int
+        version: int
+        system_type: int
+        system_subtype: int
+        fw_major_version: int
+        fw_minor_version: int
+        fw_patch_version: int
+        fw_build_version: int
+        year: int 
+        month: int
+        day: int 
+        hour: int
+        minute: int
+        second: int
+        coordinate_system: int
+        vel_x: float
+        vel_y: float
+        vel_z: float
+        vel_err: float = vel_err # Beam 4 in m/s
+        range_beam1: float
+        range_beam2: float
+        range_beam3: float
+        range_beam4: float
+        mean_range: float 
+        speed_of_sound: float
+        status: int 
+        bit_count: int
+        bit_code: int
+        voltage: float
+        transmit_voltage: float
+        current: float
+        serial_number: str
+        #For more information on variables see: https://teledynerdi.myshopify.com/pages/wayfinder-driver-system.html#dvl.system.OutputData
+
+        dvl_data_dict: dict
+
+    Usage:        
+        These two DVL_Data instances will be exacly the same after creation:
+            dvl_d = DVL_Data(day=1, hour=2, minute=4, ....) # Imagine the long list of arguments
+        and 
+            some_dic = {'day': 1, 'hour' : 2, 'minute' : 4, ......} # Imagine dictionary contains all data pairs
+            dvl_d = DVL_Data(dvl_data_dict=some_dic) # Only one key argument used in constructor
+        
+        If every keyword argument is provided in the constructor along with the dvl_data_dict, the dictionary will overwrite all previous values with its data.
+
+
+    Returns:
+        DVL_Data instance
+    """
 
     def __init__(self, is_valid=None, count=None, struct_id=None,
                 version=None, system_type=None, system_subtype=None, fw_major_version=None,
@@ -48,21 +106,31 @@ class DVL_DATA:
             self.prepare_data(dvl_dict_data)
     
     def prepare_data(self, dvl_dict: dict):
+        """
+        Takes the data given in the dictionary and uses it to set the fields of the current DVL_Data intance.
+        Keys must match the key or variable name of the data DVL_Data class, otherwise the value will be ignored.
+        
+        Args:
+            dvl_dict: dict -- dictionary containing data to be assigned to the data class.
+        """
         for key in vars(self).keys():
             if key in dvl_dict:
                 setattr(self, key, dvl_dict[key])
 
 
     def clear_data(self):
+        """Delete all instance variable fields in DVL_Data class."""
         for key in vars(self).keys():
             setattr(self, key, None)
     
     @staticmethod
     def get_all_var_names_ls():
+        """Utility method returns all variable names in a list."""
         return list(vars(DVL_DATA()).keys())
 
 
-if __name__=='__main__':    
+if __name__=='__main__':
+    """Testing method from data class."""
     print('DVL_DATA Test Variable Names:')
     print(DVL_DATA.get_all_var_names_ls())
     
