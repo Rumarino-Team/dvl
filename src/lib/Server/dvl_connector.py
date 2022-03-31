@@ -11,23 +11,32 @@ DEFAULT_LINUX_SERIAL_PORT = '/dev/ttyUSB' # Default port for jetson, usually USB
 # DEFAULT_LINUX_SERIAL_PORT = '/dev/tty' # Default port usually in linux computer
 DEFAULT_DVL_PORT = 115200 # Currently not being used
 
-def _check_for_nan(data: DVL_DATA):
+def _check_for_nan(data: DVL_DATA): # I don't think this is needed, if there is nan on json it would be 'invalid' but it produces no error receiving on the node.    
     '''NaN values give errors in json format, therefore are converted to -1.0'''
     for attr, val in vars(data).items():
         if isinstance(val, float) and isnan(val):
             setattr(data, attr, -1.0)
     return vars(data)
 
-
 class DVLDevice:
+    """ Parent class used to create different DVL devices.
+    This class should not be used directly.
+    """
 
     def connect(self):
+        """Connects to the DVL system
+        Should be overriden in a child class.
+        """
         raise NotImplementedError
 
     def get_data(self):
+        """Gets the data from the dvl device. This method should not be modified."""
         return {'DVL_Data' : _check_for_nan(self.get_dvl_data())}
 
     def get_dvl_data(self):
+        """Used to retrieve the data from the DVL device according to the device being used.
+        This method should be overriden in a child class.
+        """
         raise NotImplementedError
 
 
@@ -42,6 +51,15 @@ class WayfinderDVL(DVLDevice):
         
 
     def connect(self):
+        """Connects to the DVL device.
+        
+        Return:
+            True: if successful connection
+            False: if connection failed.
+        """
+        # TODO Overcomplicated connect is not necessary, Refactor or create simpler connect method.
+        # Method currently tries to connect to the current port set and tries it with 10 different numbers.
+        # E.g. /dev/ttyUSB0, /dev/ttyUSB1, /dev/ttyUSB2, /dev/ttyUSB3, /dev/ttyUSB4...
         for port_num in range(DEFAULT_MAX_SERIAL_PORTS):
             if self.dvl.connect(self.current_port + str(port_num)):
                 self.current_port += str(port_num)
@@ -74,6 +92,7 @@ class WayfinderDVL(DVLDevice):
 
 
     def disconnect(self):
+        """Disconnects the DVL device."""
         self.dvl.disconnect()
         if self.dvl.is_connected:
             print('Dvl device could not disconnect.')
@@ -91,6 +110,9 @@ class WayfinderDVL(DVLDevice):
         self.dvl.unregister_all_callbacks()
 
     def _update_dvl_data(self, output_data: OutputData, obj):
+        """Function being called each time the DVL device is pinged.
+        The DVL_Data instance is updated with the values received from the DVL.
+        """
         del obj # Used in examples of code provided, no idea why
         if output_data is not None:
             self.dvl_data.clear_data()
@@ -99,6 +121,7 @@ class WayfinderDVL(DVLDevice):
             print('Received no data.')
 
     def get_data(self):
+        """Pings the DVL device and returns the DVL_Data instance in json format."""
         if not self.dvl.send_software_trigger():
             print('Failed to send data request to Dvl.')                    
         return { 'DVL_Data' : vars(self.dvl_data) }
@@ -111,21 +134,26 @@ class DVLDummyDevice(DVLDevice):
         self.dvl_data = DVL_DATA()
 
     def connect(self):
+        """Dummy connect will always return True when called."""
         return True        
 
     def get_dummy_data(self):
+        """Returns the internal DVL_Data instance."""
         self.prepare_random_data()
         return self.dvl_data
 
-    def get_dummy_data_as_json(self):
+    def get_dummy_data_as_json(self): # Not being used currently.
+        """Returns the DVL_Data in json format."""
         self.prepare_random_data()
         return {'DVL_Data' : vars(self.dvl_data)} 
 
     def get_dvl_data(self):
+        """Prepares a random DVL_Data and returns it."""
         self.prepare_random_data()
         return self.dvl_data
     
     def prepare_random_data(self):
+        """Fills the DVL_Data instance with usually random values."""
         self.dvl_data.is_valid = self.rand.choice((True, False))
         self.dvl_data.count = self.rand.randint(0, 255) # From the collected example data it's always 0
         self.dvl_data.struct_id = self.rand.randint(0, 255) # From the collected example data it's always 170
