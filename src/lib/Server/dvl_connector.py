@@ -8,6 +8,7 @@ from dvl.dvl import Dvl
 
 DEFAULT_MAX_SERIAL_PORTS = 10
 DEFAULT_LINUX_SERIAL_PORT = '/dev/ttyUSB' # Default port for jetson, usually USB0
+DEFAULT_JETSON_SERIAL_PORT = '/dev/ttyUSB0'
 # DEFAULT_LINUX_SERIAL_PORT = '/dev/tty' # Default port usually in linux computer
 DEFAULT_DVL_PORT = 115200 # Currently not being used
 
@@ -49,12 +50,51 @@ class WayfinderDVL(DVLDevice):
         self.current_port = serial_port_path
         self._register_callback_function()
         
+    
 
+
+    def connect(self, device_port_path=DEFAULT_JETSON_SERIAL_PORT):
+        #TODO Has not been tested
+        """Connects to the DVL device.
+
+        Args:
+            device_port_path: str -- full path to the device USB port, Linux is usually "/dev/ttyUSB#", # being the port number being used, e.g. "/dev/ttyUSB0" or "/dev/ttyUSB0"
+
+
+        Return:
+            True : if succesful connection
+            False: if connection failed
+        """
+        if self.dvl.connect(device_port_path):
+            print(f'Connected to port: {device_port_path}\nGetting device setup...')
+            if not self.dvl.get_setup():
+                print('Failed to get system setup.\nSystem will disconnect.')
+                self.disconnect()
+            else:
+                # Print system setup
+                print(self.dvl.system_setup)
+                # Modify system setup structure to set software trigger
+                dvl_setup = self.dvl.system_setup
+                dvl_setup.software_trigger = 1
+                if not self.dvl.set_setup(dvl_setup):
+                    print('Failed to set system setup\nDisconnecting...')
+                    self.disconnect()
+                # Exit command mode, to start pinging
+                if not self.dvl.exit_command_mode():
+                    print('Failed to exit command mode.\nDisconnecting...')
+                    self.disconnect()
+                else:
+                    print('DVL device susscesfully connected.')
+                    return True
+            return False
+
+
+    '''
     def connect(self):
         """Connects to the DVL device.
         
         Return:
-            True: if successful connection
+            True : if successful connection
             False: if connection failed.
         """
         # TODO Overcomplicated connect is not necessary, Refactor or create simpler connect method.
@@ -70,7 +110,7 @@ class WayfinderDVL(DVLDevice):
                 else:
                     # Print system setup
                     print(self.dvl.system_setup)
-                    # Modify system setup structure to set structure trigger
+                    # Modify system setup structure to set software trigger
                     dvl_setup = self.dvl.system_setup
                     dvl_setup.software_trigger = 1
                     if not self.dvl.set_setup(dvl_setup):
@@ -89,7 +129,7 @@ class WayfinderDVL(DVLDevice):
             print(f'Tried to connect with {DEFAULT_MAX_SERIAL_PORTS} ports and failed.')
 
         return False
-
+    '''
 
     def disconnect(self):
         """Disconnects the DVL device."""
