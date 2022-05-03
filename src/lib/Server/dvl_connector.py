@@ -4,6 +4,8 @@ from datetime import datetime
 from math import nan, isnan
 from dvl.system import OutputData
 from dvl.dvl import Dvl
+from displacement_integration import displacement
+from copy import deepcopy
 
 
 DEFAULT_MAX_SERIAL_PORTS = 10
@@ -12,12 +14,98 @@ DEFAULT_JETSON_SERIAL_PORT = '/dev/ttyUSB0'
 # DEFAULT_LINUX_SERIAL_PORT = '/dev/tty' # Default port usually in linux computer
 DEFAULT_DVL_PORT = 115200 # Currently not being used
 
-def _check_for_nan(data: DVL_DATA): # I don't think this is needed, if there is nan on json it would be 'invalid' but it produces no error receiving on the node.    
+def _check_for_nan(data: DVL_DATA, debug=False): # I don't think this is needed, if there is nan on json it would be 'invalid' but it produces no error receiving on the node.    
     '''NaN values give errors in json format, therefore are converted to -1.0'''
-    for attr, val in vars(data).items():
-        if isinstance(val, float) and isnan(val):
-            setattr(data, attr, -1.0)
+    if debug:
+        for attr, val in vars(data).items():
+            if isinstance(val, float) and isnan(val):
+                setattr(data, attr, -1.0)
     return vars(data)
+
+def _get_time_s_dvldata(dvl_data: dict):
+    """Returns time in seconds from the given DVL_Data var dictionary.
+    
+    Args:
+        dvl_data: dict -- dictionary containing all variables from a DVL_Data instance
+
+    Return:
+        float: value representing the time from a dvl_data in seconds
+    """
+    curr_date = datetime(dvl_data['year'], dvl_data['month'],
+                         dvl_data['day'], dvl_data['hour'],
+                         dvl_data['minute'], dvl_data['second'])
+    return curr_date.timestamp()
+    
+
+class DVLHelper:
+    """Class used to determine the displacement in position from dvl messages being transmitted.
+    
+    The idea of this class is to verify the data from DVL_Data messages, verifying that
+    provided velocities are valid values. If the values from the data instances are
+    valid, a copy of the instance is stored to then wait for another valid data instance
+    to then be able to compare both of the instances and obtain the change in position
+    according to velocity and time.
+    It will always compare the latest two valid data message instances, it does not matter
+    how new or old they are. For example if the class instance has already one data instance
+    stored it will wait until the next data instance with VALID data appears no matter how
+    long it took to appear and then it will compare these two instances to obtain the change
+    in position.
+    Example:
+    1st valid data instance stored.
+    2nd next valid data instance appeared after 100000 hours of runtime
+    These two data instances will be compared.
+    
+    """
+
+    VELOCITY_VAR_NAMES = ('vel_x', 'vel_y', 'vel_z')
+
+    def __init__(self):
+        self.past_dvl_data = []        
+
+    def _check_for_valid_data(self, dvl_data: dict) -> bool:
+        """Checks for valid data in message dictionary.
+        No None, nan or instances other than floats are allowed.
+        Variables checked are: "vel_x", "vel_y", "vel_z" from the dictionary.
+
+        Args:
+            dvl_data: dict -- vars dictionary from a DVL_Data instance
+        
+        Return:
+            True:   if data is valid and a copy of the data is added to the class internal storage
+            False:  if data is not valid
+        """
+        if dvl_data:
+            for var in DVLHelper.VELOCITY_VAR_NAMES:
+                if dvl_data[var] is None or isnan(dvl_data[var] or not isinstance(dvl_data[var], float)):
+                    return False
+            self.past_dvl_data.append(deepcopy(dvl_data))
+            return True
+        else:
+            return False
+
+    def calculate_displacement(self):
+        """Calculates the displacement of position. Function first checks if it
+        has enough data to obtain displacement. If it does not have enough data
+        all values will be 0, otherwise the corresponding values will be assigned.
+
+        Dictionary will always contain the following keys:
+        x
+        y
+        z        
+
+        Return:
+            dict: dictionary containing the values of position displacement.
+        """
+        if len(self.past_dvl_data) != 0 and not len(self.past_dvl_data) % 2:
+            f_data = self.past_dvl_data.pop()
+            i_data = self.past_dvl_data.pop()
+            displacement_res = displacement((i_data['vel_x'], i_data['vel_y'], i_data['vel_z']),
+                                            (f_data['vel_x'], f_data['vel_y'], f_data['vel_z']),
+                                            (_get_time_s_dvldata(i_data), _get_time_s_dvldata(f_data)))            
+            return dict(zip(('x', 'y', 'z'), displacement_res))
+        else:
+            return {'x':0, 'y':0, 'z':0}
+
 
 class DVLDevice:
     """ Parent class used to create different DVL devices.
@@ -47,10 +135,9 @@ class WayfinderDVL(DVLDevice):
         # Find a way to tell the dvl to stop/start and exit/close/release resources
         self.dvl: Dvl = Dvl()
         self.dvl_data = DVL_DATA()
+        self.dvl_helper = DVLHelper()
         self.current_port = serial_port_path
         self._register_callback_function()
-        
-    
 
 
     def connect(self, device_port_path=DEFAULT_JETSON_SERIAL_PORT):
@@ -157,14 +244,18 @@ class WayfinderDVL(DVLDevice):
         if output_data is not None:
             self.dvl_data.clear_data()
             self.dvl_data.prepare_data(vars(output_data))
+            self.dvl_helper._check_for_valid_data(vars(self.dvl_data))
+            self.dvl_data.displacement = self.dvl_helper.calculate_displacement()
         else:
             print('Received no data.')
 
-    def get_data(self):
-        """Pings the DVL device and returns the DVL_Data instance in json format."""
+    def get_dvl_data(self):
+        """Pings the DVL device and returns the DVL_Data dictionary."""
         if not self.dvl.send_software_trigger():
-            print('Failed to send data request to Dvl.')                    
-        return { 'DVL_Data' : vars(self.dvl_data) }
+            print('Failed to send data request to Dvl')
+        return vars(self.dvl_data)
+
+
 
 
 class DVLDummyDevice(DVLDevice):
@@ -172,6 +263,7 @@ class DVLDummyDevice(DVLDevice):
     def __init__(self) -> None:
         self.rand = Random()        
         self.dvl_data = DVL_DATA()
+        self.dvl_helper = DVLHelper()
 
     def connect(self):
         """Dummy connect will always return True when called."""
@@ -190,6 +282,8 @@ class DVLDummyDevice(DVLDevice):
     def get_dvl_data(self):
         """Prepares a random DVL_Data and returns it."""
         self.prepare_random_data()
+        self.dvl_helper._check_for_valid_data(vars(self.dvl_data))
+        self.dvl_data.displacement = self.dvl_helper.calculate_displacement()
         return self.dvl_data
     
     def prepare_random_data(self):

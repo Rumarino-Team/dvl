@@ -66,7 +66,7 @@ class DVL_DATA:
                 range_beam1=None, range_beam2=None, range_beam3=None, range_beam4=None,
                 mean_range=None, speed_of_sound=None, status=None, bit_count=None,
                 bit_code=None, voltage=None, transmit_voltage=None, current=None,
-                serial_number=None, dvl_dict_data=None) -> None:
+                serial_number=None, displacement={'x':0, 'y':0, 'z':0}, dvl_dict_data=None) -> None:
         
         self.is_valid: bool = is_valid
         self.count: int = count # Count of data packets
@@ -102,6 +102,7 @@ class DVL_DATA:
         self.transmit_voltage: float = transmit_voltage
         self.current: float = current
         self.serial_number: str = serial_number
+        self.displacement: list = displacement
         if dvl_dict_data:
             self.prepare_data(dvl_dict_data)
     
@@ -122,6 +123,7 @@ class DVL_DATA:
         """Delete all instance variable fields in DVL_Data class."""
         for key in vars(self).keys():
             setattr(self, key, None)
+        setattr(self, 'displacement', {'x':0, 'y':0, 'z':0})
     
     @staticmethod
     def get_all_var_names_ls():

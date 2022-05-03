@@ -57,13 +57,20 @@ class DVLNodePublisher:
         
     def _populate_dvl_msg_data(self, data_from_request):
         """Takes the json data dictionary and parses the information and fills the ros message instance."""
+        
         for key, val in data_from_request.items(): # Iterate over the items of the dictionary (key, val)
             if key in dir(self.dvl_msg_data): # Checks if the key from the data dictionary is in the DVL_Raw message
                 if isinstance(val, unicode): # Dirty workaround to set string variable from data dictionary
                     msg_attr = getattr(self.dvl_msg_data, key) # Gets String message instance from Raw_DVL messag instance and set its data value
-                    msg_attr.data = val.encode('utf-8')                        
+                    msg_attr.data = val.encode('utf-8')
+                elif isinstance(val, dict): # I'm ashamed of this thing
+                    self.dvl_msg_data.displacement.x = val['x']
+                    self.dvl_msg_data.displacement.y = val['y']
+                    self.dvl_msg_data.displacement.z = val['z']
                 else:          
                     setattr(self.dvl_msg_data, key, val)
+        
+
 
     def _get_msg_header(self):
         """
@@ -79,7 +86,7 @@ class DVLNodePublisher:
         msg_header.stamp = Time.now()
         return msg_header
         
-            
+
 
 
 if __name__=='__main__': # Code runs if this script is loaded as main
